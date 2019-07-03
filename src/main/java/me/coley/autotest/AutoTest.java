@@ -38,7 +38,8 @@ public class AutoTest implements Runnable {
 				.formatPattern("{level}-{date}: {message|indent=4}")
 				.activate();
 		// Invoke
-		new CommandLine(new AutoTest()).execute(args);
+		int exit = new CommandLine(new AutoTest()).execute(args);
+		System.exit(exit);
 	}
 
 	public void run() {
@@ -98,7 +99,5 @@ public class AutoTest implements Runnable {
 		}
 		long now = System.currentTimeMillis();
 		Logger.info("AutoTest - Completion time: {}", now - start);
-		// Force close
-		System.exit(0);
 	}
 }
