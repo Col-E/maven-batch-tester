@@ -12,6 +12,11 @@ import java.util.concurrent.*;
 
 import static java.nio.charset.Charset.defaultCharset;
 
+/**
+ * Driver; collects project analysis results.
+ *
+ * @author Matt
+ */
 public class AutoTest implements Runnable {
 	/**
 	 * Time to wait between checking if projects have finished being tested.

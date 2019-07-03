@@ -16,6 +16,8 @@ import java.util.regex.Pattern;
 import static java.nio.charset.Charset.defaultCharset;
 
 /**
+ * Thread for analyzing a given project.
+ *
  * @author Matt
  */
 public class TestInvokeThread implements Callable<TestResults> {
