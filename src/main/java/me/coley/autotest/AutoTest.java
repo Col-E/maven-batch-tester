@@ -18,10 +18,6 @@ import static java.nio.charset.Charset.defaultCharset;
  * @author Matt
  */
 public class AutoTest implements Runnable {
-	/**
-	 * Time to wait between checking if projects have finished being tested.
-	 */
-	private static final long COLLECTION_WAIT = 1000L;
 	// CLI args
 	@CommandLine.Parameters(index = "0", description = "The directory containing repositories to analyze.")
 	public File repositoriesDir;
@@ -29,8 +25,6 @@ public class AutoTest implements Runnable {
 	public File reportFile;
 	@CommandLine.Option(names = {"-m2"}, description = "Set the maven home directory.")
 	public File mavenHome;
-	@CommandLine.Option(names = {"-t"}, description = "Number of threads to use. Default uses all possible CPUs.")
-	public int threads = -1;
 
 	public static void main(String[] args) {
 		// Setup logging
@@ -52,35 +46,14 @@ public class AutoTest implements Runnable {
 		String path = repositoriesDir.getAbsolutePath();
 		File[] dirs = repositoriesDir.listFiles(f -> f.isDirectory());
 		Logger.info("Repositories directory: \"{}\" ({} projects)", path, dirs.length);
-		// Start threads for each project
-		Set<Future<TestResults>> futures = new HashSet<>();
-		int size = threads == -1 ? Runtime.getRuntime().availableProcessors() - 1 : threads;
-		ExecutorService executor = Executors.newFixedThreadPool(size);
-		for (File dir : dirs) {
-			futures.add( executor.submit(new TestInvokeThread(dir)));
-		}
 		// Collect results
 		Set<TestResults> results = new HashSet<>();
-		while (!futures.isEmpty()) {
+		for (File dir : dirs) {
 			try {
-				for (Future<TestResults> future : new HashSet<>(futures)) {
-					// check if result has been computed.
-					if (future.isDone()) {
-						// remove from the to-check list
-						futures.remove(future);
-						TestResults result = future.get();
-						if (result != null) {
-							results.add(result);
-						} else {
-							// TODO: Should we throw an exception and force the user to look
-							// into which test did not yield results?
-						}
-					}
-				}
-				// Wait and check back
-				Thread.sleep(COLLECTION_WAIT);
-			} catch(InterruptedException e) {} catch(ExecutionException e) {
-				Logger.error(e, "Failure when computing results");
+				TestResults result = new TestInvokeThread(dir).call();
+				results.add(result);
+			} catch(Exception e) {
+				Logger.error(e);
 			}
 		}
 		// Dump reports

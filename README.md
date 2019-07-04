@@ -9,5 +9,4 @@ java -jar autotest-{version}.jar [-m2=<mavenHome>] [-t=<threads>] <repositoriesD
       <repositoriesDir>   The directory containing repositories to analyze.
       <reportFile>        The file to write the analysis report to.
       -m2=<mavenHome>     Set the maven home directory. Default uses %M2_HOME% environment variable.
-      -t=<threads>        Number of threads to use. Default uses all possible CPUs.
 ```
