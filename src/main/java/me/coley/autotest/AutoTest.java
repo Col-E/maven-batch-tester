@@ -24,6 +24,8 @@ public class AutoTest implements Runnable {
 	public File reportFile;
 	@CommandLine.Option(names = {"-m2"}, description = "Set the maven home directory.")
 	public File mavenHome;
+	@CommandLine.Option(names = {"-r"}, description = "Number of times to rerun tests.")
+	public int runs = 1;
 
 	public static void main(String[] args) {
 		// Setup logging
@@ -46,22 +48,37 @@ public class AutoTest implements Runnable {
 		File[] dirs = repositoriesDir.listFiles(f -> f.isDirectory());
 		Logger.info("Repositories directory: \"{}\" ({} projects)", path, dirs.length);
 		// Collect results
-		Set<TestResults> results = new HashSet<>();
+		Set<TestResultGroups> projectResults = new HashSet<>();
 		for (File dir : dirs) {
 			try {
-				TestResults result = new TestInvokeThread(dir).call();
-				results.add(result);
+				TestResultGroups result = new TestInvokeThread(runs, dir).call();
+				projectResults.add(result);
 			} catch(Exception e) {
 				Logger.error(e);
 			}
 		}
 		// Dump reports
 		StringBuilder sb = new StringBuilder("PROJECT,TOTAL,FAILS,ERRORS,SKIPPED,TEST_TIME\n");
-		for(TestResults result : results) {
-			Logger.info("{}: Ran {} tests in {}ms", result.name, result.total, result.elapsed);
-			sb.append(result.name + "," + result.total + "," + result.fails + "," + result.errors
-					+ "," + result.skipped + "," + result.elapsed + "\n");
+		for (TestResultGroups group : projectResults) {
+			sb.append("\n" + group.name());
+			sb.append("STANDARD:\n");
+			for(TestResults result : group.getStandard()) {
+				sb.append(result.total + "," + result.fails + "," + result.errors
+						+ "," + result.skipped + "," + result.elapsed + "\n");
+			}
+			sb.append("FORKSCRIPT:\n");
+			for(TestResults result : group.getForkscript()) {
+				sb.append(result.total + "," + result.fails + "," + result.errors
+						+ "," + result.skipped + "," + result.elapsed + "\n");
+			}
+			sb.append("CUSTOM:\n");
+			for(TestResults result : group.getCustom()) {
+				sb.append(result.total + "," + result.fails + "," + result.errors
+						+ "," + result.skipped + "," + result.elapsed + "\n");
+			}
+			sb.append("\n");
 		}
+
 		Logger.info("Results:\n{}", sb.toString());
 		try {
 			byte[] out = sb.toString().getBytes(defaultCharset());

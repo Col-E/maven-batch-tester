@@ -7,10 +7,6 @@ package me.coley.autotest;
  */
 public class TestResults {
 	/**
-	 * Project's name.
-	 */
-	public final String name;
-	/**
 	 * Tests run.
 	 */
 	public final int total, fails, errors, skipped;
@@ -19,8 +15,7 @@ public class TestResults {
 	 */
 	public final int elapsed;
 
-	public TestResults(String name, int total, int fails, int errors, int skipped, int elapsed) {
-		this.name = name;
+	public TestResults(int total, int fails, int errors, int skipped, int elapsed) {
 		this.total = total;
 		this.fails = fails;
 		this.errors = errors;
