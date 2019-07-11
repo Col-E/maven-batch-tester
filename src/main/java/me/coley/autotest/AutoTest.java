@@ -58,7 +58,7 @@ public class AutoTest implements Runnable {
 			}
 		}
 		// Dump reports
-		StringBuilder sb = new StringBuilder("PROJECT,TOTAL,FAILS,ERRORS,SKIPPED,TEST_TIME\n");
+		StringBuilder sb = new StringBuilder("TOTAL,FAILS,ERRORS,SKIPPED,TEST_TIME\n");
 		for (TestResultGroups group : projectResults) {
 			sb.append("\n" + group.name() + "\n");
 			sb.append("STANDARD:\n");
