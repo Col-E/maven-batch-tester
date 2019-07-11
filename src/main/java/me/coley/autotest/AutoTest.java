@@ -22,7 +22,7 @@ public class AutoTest implements Runnable {
 	public File repositoriesDir;
 	@CommandLine.Parameters(index = "1", description = "The file to write the analysis report to.")
 	public File reportFile;
-	@CommandLine.Option(names = {"-m2"}, description = "Set the maven home directory.")
+	@CommandLine.Option(names = {"-m"}, description = "Set the maven home directory.")
 	public File mavenHome;
 
 	public static void main(String[] args) {
