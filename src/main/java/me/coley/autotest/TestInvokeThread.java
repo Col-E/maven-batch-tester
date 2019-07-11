@@ -68,25 +68,19 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 	public TestResultGroups call() throws Exception {
 		// results
 		List<TestResults> standard = new ArrayList<>();
-		List<TestResults> snapshot = new ArrayList<>();
+		List<TestResults> forkscript = new ArrayList<>();
 		List<TestResults> custom = new ArrayList<>();
 		// Initial compile
 		compile();
 		// Run tests with different plugin versions
 		// - Standard current release
-		// - Forkscript release
 		// - Our custom release
+		// - Forkscript release
 		setupPom("3.0.0-M3");
 		for(int i = 0; i < runs; i++) {
 			TestResults res = runTests();
 			if(res != null)
 				standard.add(res);
-		}
-		setupPom("2.21.0");
-		for(int i = 0; i < runs; i++) {
-			TestResults res = runTests();
-			if(res != null)
-				snapshot.add(res);
 		}
 		setupPom("3.0.0-SNAPSHOT");
 		for(int i = 0; i < runs; i++) {
@@ -94,7 +88,13 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 			if(res != null)
 				custom.add(res);
 		}
-		return new TestResultGroups(name, standard, snapshot, custom);
+		setupPom("2.21.0");
+		for(int i = 0; i < runs; i++) {
+			TestResults res = runTests();
+			if(res != null)
+				forkscript.add(res);
+		}
+		return new TestResultGroups(name, standard, forkscript, custom);
 	}
 
 	private void setupPom(String versionStr) throws Exception {
