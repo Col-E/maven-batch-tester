@@ -206,8 +206,14 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 		AtomicInteger skipped = new AtomicInteger(-1);
 		test.setOutputHandler(line -> {
 			if(line.contains("Tests run:") && !line.contains(" in ")) {
+				// forkscript double responds due to the embedded nature
+				// so skip the dummy line with 0 results
+				if (line.contains("Tests run: 0,")) return;
+				// substring for consistent behaviors across different terminals
+				String sub = line.substring(line.indexOf("Tests run:"));
+				Logger.info(sub);
 				Pattern pattern = Pattern.compile("\\d+");
-				Matcher matcher = pattern.matcher(line);
+				Matcher matcher = pattern.matcher(sub);
 				int i = 0;
 				while(matcher.find()) {
 					int val = Integer.parseInt(matcher.group());
