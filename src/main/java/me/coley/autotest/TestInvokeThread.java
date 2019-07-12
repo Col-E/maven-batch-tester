@@ -10,13 +10,13 @@ import javax.xml.transform.*;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.nio.file.*;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static java.nio.charset.Charset.defaultCharset;
 
@@ -42,7 +42,7 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 	/**
 	 * Project's pom file.
 	 */
-	private final File pom;
+	private final File rootPom;
 	/**
 	 * Project name.
 	 */
@@ -55,7 +55,7 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 	public TestInvokeThread(int runs, File dir) {
 		this.runs = runs;
 		this.dir = dir;
-		this.pom = new File(dir, "pom.xml");
+		this.rootPom = new File(dir, "pom.xml");
 		String name = dir.getName();
 		if (name.contains("-master")) {
 			name = name.substring(0, name.length()-7);
@@ -76,28 +76,41 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 		// - Standard current release
 		// - Our custom release
 		// - Forkscript release
-		setupPom("3.0.0-M3");
+		//
+		// List of pom files to update (since some projects are modular)
+		List<File> poms = Files.walk(dir.toPath())
+				.filter(f -> f.toString().endsWith("pom.xml"))
+				.map(Path::toFile)
+				.sorted()
+				.collect(Collectors.toList());
+		setupPoms("3.0.0-M3", poms);
 		for(int i = 0; i < runs; i++) {
-			TestResults res = runTests();
+			TestResults res = runTests(i);
 			if(res != null)
 				standard.add(res);
 		}
-		setupPom("3.0.0-SNAPSHOT");
+		setupPoms("3.0.0-SNAPSHOT", poms);
 		for(int i = 0; i < runs; i++) {
-			TestResults res = runTests();
+			TestResults res = runTests(i);
 			if(res != null)
 				custom.add(res);
 		}
-		setupPom("2.21.0");
+		setupPoms("2.21.0", poms);
 		for(int i = 0; i < runs; i++) {
-			TestResults res = runTests();
+			TestResults res = runTests(i);
 			if(res != null)
 				forkscript.add(res);
 		}
 		return new TestResultGroups(name, standard, forkscript, custom);
 	}
 
-	private void setupPom(String versionStr) throws Exception {
+	private void setupPoms(String versionStr, Collection<File> poms) throws Exception {
+		for(File pom : poms) {
+			setupPom(versionStr, pom);
+		}
+	}
+
+	private void setupPom(String versionStr, File pom) throws Exception {
 		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
 		DocumentBuilder db = dbf.newDocumentBuilder();
 		Document doc = db.parse(pom);
@@ -175,7 +188,7 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 	private void compile() throws Exception {
 		// Request to setup
 		InvocationRequest setup = new DefaultInvocationRequest();
-		setup.setPomFile(pom);
+		setup.setPomFile(rootPom);
 		setup.setGoals(Arrays.asList("clean", "compile"));
 		setup.setMavenOpts(INVOKE_OPTS);
 		setup.setOutputHandler(line -> {
@@ -193,13 +206,13 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 		}
 	}
 
-	private TestResults runTests() throws Exception {
+	private TestResults runTests(int run) throws Exception {
 		// Run tests
 		InvocationRequest test = new DefaultInvocationRequest();
-		test.setPomFile(pom);
+		test.setPomFile(rootPom);
 		test.setGoals(Arrays.asList("test"));
 		test.setMavenOpts(INVOKE_OPTS);
-		Logger.info("Running tests for \"{}\"", name);
+		Logger.info("Running tests for \"{}\" [{}/{}]", name, run+1, runs);
 		AtomicInteger total = new AtomicInteger(-1);
 		AtomicInteger fails = new AtomicInteger(-1);
 		AtomicInteger errors = new AtomicInteger(-1);
@@ -258,6 +271,4 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 		}
 		return null;
 	}
-
-
 }
