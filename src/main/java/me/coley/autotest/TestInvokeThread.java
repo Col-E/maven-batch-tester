@@ -36,6 +36,11 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 	 */
 	private final int runs;
 	/**
+	 * Flag for silencing maven's initial compile output.
+	 * Enabled by default but may be useful to disable for manual monitoring.
+	 */
+	private final boolean silentCompile;
+	/**
 	 * Project directory of the maven project to test.
 	 */
 	private final File dir;
@@ -52,8 +57,9 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 	 */
 	private Invoker invoker = new DefaultInvoker();
 
-	public TestInvokeThread(int runs, File dir) {
+	public TestInvokeThread(int runs, boolean silentCompile, File dir) {
 		this.runs = runs;
+		this.silentCompile = silentCompile;
 		this.dir = dir;
 		this.rootPom = new File(dir, "pom.xml");
 		String name = dir.getName();
@@ -191,9 +197,11 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 		setup.setPomFile(rootPom);
 		setup.setGoals(Arrays.asList("clean", "compile"));
 		setup.setMavenOpts(INVOKE_OPTS);
-		setup.setOutputHandler(line -> {
-			// Silence the compilation stdOut
-		});
+		if (silentCompile) {
+			setup.setOutputHandler(line -> {
+				// Silence the compilation stdOut
+			});
+		}
 		// Run setup compilation if target directory does not exist
 		if (!new File(dir, "target").exists()) {
 			Logger.info("Compiling \"{}\"", name);
