@@ -54,7 +54,7 @@ public class AutoTest implements Runnable {
 				TestResultGroups result = new TestInvokeThread(runs, dir).call();
 				projectResults.add(result);
 			} catch(Exception e) {
-				Logger.error(e);
+				Logger.error(e, "Skipping \"{}\" due to exception", dir);
 			}
 		}
 		// Dump reports
