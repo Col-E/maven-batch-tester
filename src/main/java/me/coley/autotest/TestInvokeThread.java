@@ -91,19 +91,19 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 				.collect(Collectors.toList());
 		setupPoms("3.0.0-M3", poms);
 		for(int i = 0; i < runs; i++) {
-			TestResults res = runTests(i);
+			TestResults res = runTests(i, "Standard");
 			if(res != null)
 				standard.add(res);
 		}
 		setupPoms("3.0.0-SNAPSHOT", poms);
 		for(int i = 0; i < runs; i++) {
-			TestResults res = runTests(i);
+			TestResults res = runTests(i, "Custom");
 			if(res != null)
 				custom.add(res);
 		}
 		setupPoms("2.21.0", poms);
 		for(int i = 0; i < runs; i++) {
-			TestResults res = runTests(i);
+			TestResults res = runTests(i, "Forkscript");
 			if(res != null)
 				forkscript.add(res);
 		}
@@ -143,8 +143,40 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 			}
 		}
 		if (!foundSurefire) {
-			Logger.error("Failed to find surefire plugin in: " + name);
-			throw new IllegalStateException("No surefire plugin specified in project pom.xml for: " + name);
+			if (pom.equals(rootPom)) {
+				// The root MUST specify the plugin
+				Logger.warn("Failed to find surefire plugin in \"{}\" - inserting plugin and restarting", name);
+				// Get <build>
+				NodeList builds = doc.getElementsByTagName("build");
+				if (builds.getLength() > 1) {
+					throw new IllegalStateException("Can't determine which <build> to insert maven-surefire-plugin into");
+				}
+				NodeList buildChildren = builds.item(0).getChildNodes();
+				// Get <build><plugins>
+				Node buildPlugins = null;
+				for (int i = 0; i < buildChildren.getLength(); i++) {
+					Node child = buildChildren.item(i);
+					if (child.getNodeName().equals("plugins")) {
+						buildPlugins = child;
+						break;
+					}
+				}
+				// Insert maven-surefire-plugin
+				surefire =  doc.createElement("plugin");
+				Node sfGroup =  doc.createElement("groupId");
+				Node sfArtifact =  doc.createElement("artifactId");
+				version =  doc.createElement("version");
+				sfGroup.setTextContent("org.apache.maven.plugins");
+				sfArtifact.setTextContent("maven-surefire-plugin");
+				version.setTextContent(versionStr);
+				surefire.appendChild(sfGroup);
+				surefire.appendChild(sfArtifact);
+				surefire.appendChild(version);
+				buildPlugins.appendChild(surefire);
+			} else {
+				// subprojects will defer to the root
+				return;
+			}
 		}
 		// Update version
 		if (version == null)  {
@@ -214,13 +246,13 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 		}
 	}
 
-	private TestResults runTests(int run) throws Exception {
+	private TestResults runTests(int run, String version) throws Exception {
 		// Run tests
 		InvocationRequest test = new DefaultInvocationRequest();
 		test.setPomFile(rootPom);
 		test.setGoals(Arrays.asList("test"));
 		test.setMavenOpts(INVOKE_OPTS);
-		Logger.info("Running tests for \"{}\" [{}/{}]", name, run+1, runs);
+		Logger.info("Running tests for \"{}\" [{}/{}] - {}", name, run+1, runs, version);
 		AtomicInteger total = new AtomicInteger(-1);
 		AtomicInteger fails = new AtomicInteger(-1);
 		AtomicInteger errors = new AtomicInteger(-1);
