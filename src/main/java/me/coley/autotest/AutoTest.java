@@ -2,6 +2,7 @@ package me.coley.autotest;
 
 import org.pmw.tinylog.Configurator;
 import org.pmw.tinylog.Logger;
+import org.pmw.tinylog.writers.FileWriter;
 import picocli.CommandLine;
 
 import java.io.File;
@@ -33,6 +34,7 @@ public class AutoTest implements Runnable {
 		// Setup logging
 		Configurator.defaultConfig()
 				.formatPattern("{level}-{date}: {message|indent=4}")
+				.addWriter(new FileWriter("autotest-stdout.txt"))
 				.activate();
 		// Invoke
 		int exit = new CommandLine(new AutoTest()).execute(args);
