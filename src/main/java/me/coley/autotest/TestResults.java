@@ -22,4 +22,9 @@ public class TestResults {
 		this.skipped = skipped;
 		this.elapsed = elapsed;
 	}
+
+	@Override
+	public String toString() {
+		return "Results[" + total + ", " + fails + ", " + errors + ", " + skipped + "] in " + elapsed + "ms";
+	}
 }

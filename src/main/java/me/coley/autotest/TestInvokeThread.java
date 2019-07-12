@@ -266,7 +266,9 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 			if (line.contains("test\ttest")) {
 				String[] args = line.split("\t");
 				int time = Integer.parseInt(args[5]);
-				return new TestResults(total.get(), fails.get(), errors.get(), skipped.get(), time);
+				TestResults ret = new TestResults(total.get(), fails.get(), errors.get(), skipped.get(), time);
+				Logger.info(ret);
+				return ret;
 			}
 		}
 		return null;
