@@ -32,6 +32,10 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 	 */
 	private static final String INVOKE_OPTS = "-Drat.skip=true -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true -Dpmd.skip=true -Dcpd.skip=true -Dfindbugs.skip=true";
 	/**
+	 * Timeout before terminating a sub-process in seconds.
+	 */
+	private static final int TIMEOUT_SECONDS = 60 * 30;
+	/**
 	 * Number of times to re-execute tests.
 	 */
 	private final int runs;
@@ -135,12 +139,14 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 				if (attribute.getNodeName().equals("artifactId") && attribute.getTextContent().equals("maven-surefire-plugin")) {
 					surefire = plugin;
 					foundSurefire = true;
-				} else if (version == null && foundSurefire && attribute.getNodeName().equals("version")) {
+				} else if (version == null && foundSurefire && attribute.getParentNode().equals(plugin) && attribute.getNodeName().equals("version")) {
 					version = attribute;
-				}  else if (configuration == null && foundSurefire && attribute.getNodeName().equals("configuration")) {
+				}  else if (configuration == null && foundSurefire && attribute.getParentNode().equals(plugin) && attribute.getNodeName().equals("configuration")) {
 					configuration = attribute;
 				}
 			}
+			if (foundSurefire)
+				break;
 		}
 		if (!foundSurefire) {
 			if (pom.equals(rootPom)) {
@@ -229,6 +235,7 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 		setup.setPomFile(rootPom);
 		setup.setGoals(Arrays.asList("clean", "compile"));
 		setup.setMavenOpts(INVOKE_OPTS);
+		setup.setTimeoutInSeconds(TIMEOUT_SECONDS);
 		if (silentCompile) {
 			setup.setOutputHandler(line -> {
 				// Silence the compilation stdOut
@@ -252,11 +259,12 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 		test.setPomFile(rootPom);
 		test.setGoals(Arrays.asList("test"));
 		test.setMavenOpts(INVOKE_OPTS);
+		test.setTimeoutInSeconds(TIMEOUT_SECONDS);
 		Logger.info("Running tests for \"{}\" [{}/{}] - {}", name, run+1, runs, version);
-		AtomicInteger total = new AtomicInteger(-1);
-		AtomicInteger fails = new AtomicInteger(-1);
-		AtomicInteger errors = new AtomicInteger(-1);
-		AtomicInteger skipped = new AtomicInteger(-1);
+		AtomicInteger total = new AtomicInteger(0);
+		AtomicInteger fails = new AtomicInteger(0);
+		AtomicInteger errors = new AtomicInteger(0);
+		AtomicInteger skipped = new AtomicInteger(0);
 		test.setOutputHandler(line -> {
 			if(line.contains("Tests run:") && !line.contains(" in ")) {
 				// forkscript double responds due to the embedded nature
@@ -264,36 +272,35 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 				if (line.contains("Tests run: 0,")) return;
 				// substring for consistent behaviors across different terminals
 				String sub = line.substring(line.indexOf("Tests run:"));
-				Logger.info(sub);
 				Pattern pattern = Pattern.compile("\\d+");
 				Matcher matcher = pattern.matcher(sub);
 				int i = 0;
 				while(matcher.find()) {
-					int val = Integer.parseInt(matcher.group());
+ 					int val = Integer.parseInt(matcher.group());
 					switch(i) {
 						case 0:
-							total.set(val);
+							total.addAndGet(val);
 							break;
 						case 1:
-							fails.set(val);
+							fails.addAndGet(val);
 							break;
 						case 2:
-							errors.set(val);
+							errors.addAndGet(val);
 							break;
 						case 3:
-							skipped.set(val);
+							skipped.addAndGet(val);
 							break;
 					}
 					i++;
 				}
-				Logger.info("Test summary for \"{}\": total[{}] fails[{}] errors[{}] skipped[{}]",
-						name, total, fails, errors, skipped);
 			}
 		});
 		InvocationResult res = invoker.execute(test);
 		if(res.getExitCode() != 0) {
 			throw new IllegalStateException("Test invoke failed.", res.getExecutionException());
 		}
+		Logger.info("Test summary for \"{}\": total[{}] fails[{}] errors[{}] skipped[{}]",
+				name, total, fails, errors, skipped);
 		// Fetch results
 		Logger.info("Collecting results for \"{}\"", name);
 		File phaseLog = new File(dir, "maven.build.log");
