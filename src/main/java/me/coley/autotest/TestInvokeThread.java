@@ -299,8 +299,6 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 		if(res.getExitCode() != 0) {
 			throw new IllegalStateException("Test invoke failed.", res.getExecutionException());
 		}
-		Logger.info("Test summary for \"{}\": total[{}] fails[{}] errors[{}] skipped[{}]",
-				name, total, fails, errors, skipped);
 		// Fetch results
 		File phaseLog = new File(dir, "maven.build.log");
 		if (!phaseLog.exists()) {
