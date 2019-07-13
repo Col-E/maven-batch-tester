@@ -302,7 +302,6 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 		Logger.info("Test summary for \"{}\": total[{}] fails[{}] errors[{}] skipped[{}]",
 				name, total, fails, errors, skipped);
 		// Fetch results
-		Logger.info("Collecting results for \"{}\"", name);
 		File phaseLog = new File(dir, "maven.build.log");
 		if (!phaseLog.exists()) {
 			throw new IllegalStateException("Missing \"maven.build.log\" for \"" + name + "\"");
