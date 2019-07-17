@@ -34,7 +34,7 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 	/**
 	 * Timeout before terminating a sub-process in seconds.
 	 */
-	private static final int TIMEOUT_SECONDS = 60 * 30;
+	private static final int TIMEOUT_SECONDS = 60 * 60 * 2;
 	/**
 	 * Number of times to re-execute tests.
 	 */
