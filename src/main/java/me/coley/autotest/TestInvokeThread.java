@@ -40,10 +40,13 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 	 */
 	private final int runs;
 	/**
-	 * Flag for silencing maven's initial compile output.
-	 * Enabled by default but may be useful to disable for manual monitoring.
+	 * Flag for allowing emitting maven's logging.
 	 */
-	private final boolean silentCompile;
+	private final boolean emitMvnLogging;
+	/**
+	 * Phase to run.
+	 */
+	private final String phase;
 	/**
 	 * Project directory of the maven project to test.
 	 */
@@ -61,10 +64,13 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 	 */
 	private Invoker invoker = new DefaultInvoker();
 
-	public TestInvokeThread(int runs, boolean silentCompile, File dir) {
+	public TestInvokeThread(int runs, boolean emitMvnLogging, String phase, File dir) {
 		this.runs = runs;
-		this.silentCompile = silentCompile;
+		this.emitMvnLogging = emitMvnLogging;
 		this.dir = dir;
+		if (phase == null)
+			phase = "ALL";
+		this.phase = phase;
 		this.rootPom = new File(dir, "pom.xml");
 		String name = dir.getName();
 		if (name.contains("-master")) {
@@ -93,25 +99,32 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 				.map(Path::toFile)
 				.sorted()
 				.collect(Collectors.toList());
-		setupPoms("3.0.0-M3", poms);
-		for(int i = 0; i < runs; i++) {
-			TestResults res = runTests(i, "Standard");
-			if(res != null)
-				standard.add(res);
-		}
-		setupPoms("3.0.0-SNAPSHOT", poms);
-		for(int i = 0; i < runs; i++) {
-			TestResults res = runTests(i, "Custom");
-			if(res != null)
-				custom.add(res);
-		}
-		setupPoms("2.21.0", poms);
-		for(int i = 0; i < runs; i++) {
-			TestResults res = runTests(i, "Forkscript");
-			if(res != null)
-				forkscript.add(res);
+		switch(phase) {
+			case "STANDARD":
+				exec(poms, standard, "3.0.0-M3", "Standard");
+				break;
+			case "CUSTOM":
+				exec(poms, standard, "3.0.0-SNAPSHOT", "Custom");
+				break;
+			case "FORKSCRIPT":
+				exec(poms, standard, "2.21.0", "Forkscript");
+				break;
+			default:
+				exec(poms, standard, "3.0.0-M3", "Standard");
+				exec(poms, standard, "3.0.0-SNAPSHOT", "Custom");
+				exec(poms, standard, "2.21.0", "Forkscript");
+				break;
 		}
 		return new TestResultGroups(name, standard, forkscript, custom);
+	}
+
+	private void exec(List<File> poms, List<TestResults> results, String version, String phase)throws Exception {
+		setupPoms(version, poms);
+		for(int i = 0; i < runs; i++) {
+			TestResults res = runTests(i, phase);
+			if(res != null)
+				results.add(res);
+		}
 	}
 
 	private void setupPoms(String versionStr, Collection<File> poms) throws Exception {
@@ -236,17 +249,22 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 		setup.setGoals(Arrays.asList("clean", "compile"));
 		setup.setMavenOpts(INVOKE_OPTS);
 		setup.setTimeoutInSeconds(TIMEOUT_SECONDS);
-		if (silentCompile) {
 			setup.setOutputHandler(line -> {
-				// Silence the compilation stdOut
+				if (emitMvnLogging) {
+					Logger.trace(line);
+				}
 			});
-		}
 		// Run setup compilation if target directory does not exist
-		if (!new File(dir, "target").exists()) {
+		File target = new File(dir, "target");
+		if (!target.exists()) {
 			Logger.info("Compiling \"{}\"", name);
 			InvocationResult res = invoker.execute(setup);
 			if(res.getExitCode() != 0) {
 				throw new IllegalStateException("Compile invoke failed.", res.getExecutionException());
+			}
+			// Just make the dummy folder so we don't try to compile again and waste time
+			if (!target.exists()) {
+				target.mkdir();
 			}
 		} else {
 			Logger.info("Skipping compilation for \"{}\", already has \"target\"", name);
@@ -266,6 +284,9 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 		AtomicInteger errors = new AtomicInteger(0);
 		AtomicInteger skipped = new AtomicInteger(0);
 		test.setOutputHandler(line -> {
+			if (emitMvnLogging) {
+				Logger.trace(line);
+			}
 			if(line.contains("Tests run:") && !line.contains(" in ")) {
 				// forkscript double responds due to the embedded nature
 				// so skip the dummy line with 0 results
@@ -297,7 +318,10 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 		});
 		InvocationResult res = invoker.execute(test);
 		if(res.getExitCode() != 0) {
-			throw new IllegalStateException("Test invoke failed.", res.getExecutionException());
+			Logger.error(res.getExecutionException(), "Test invoke failed.");
+			TestResults ret = new TestResults(total.get(), fails.get(), errors.get(), skipped.get(), -1);
+			Logger.info(ret);
+			return ret;
 		}
 		// Fetch results
 		File phaseLog = new File(dir, "maven.build.log");
@@ -305,16 +329,18 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 			throw new IllegalStateException("Missing \"maven.build.log\" for \"" + name + "\"");
 		}
 		List<String> lines = Files.readAllLines(Paths.get(phaseLog.toURI()), defaultCharset());
-		for (String line : lines) {
+		int time = 0;
+		for(String line : lines) {
 			// The line containing the test phase will have this pattern
-			if (line.contains("test\ttest")) {
+			if(line.contains("org.apache.maven.plugins:maven-surefire-plugin")) {
 				String[] args = line.split("\t");
-				int time = Integer.parseInt(args[5]);
-				TestResults ret = new TestResults(total.get(), fails.get(), errors.get(), skipped.get(), time);
-				Logger.info(ret);
-				return ret;
+				// Rather than setting and returning, increment.
+				// There may be multiple if the project is modular.
+				time += Integer.parseInt(args[5]);
 			}
 		}
-		return null;
+		TestResults ret = new TestResults(total.get(), fails.get(), errors.get(), skipped.get(), time);
+		Logger.info(ret);
+		return ret;
 	}
 }

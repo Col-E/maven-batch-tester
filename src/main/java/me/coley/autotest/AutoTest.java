@@ -27,8 +27,10 @@ public class AutoTest implements Runnable {
 	public File mavenHome;
 	@CommandLine.Option(names = {"-r"}, description = "Number of times to rerun tests.", defaultValue = "1")
 	public int runs = 1;
-	@CommandLine.Option(names = {"--sc"}, description = "Silence maven's output for compilation.", defaultValue = "true")
-	public boolean silentCompile = true;
+	@CommandLine.Option(names = {"-s"}, description = "Emit maven's logging.")
+	public boolean emitMvnLogging;
+	@CommandLine.Option(names = {"-p"}, description = "Specify to only run one of the phases of the batch tester. Options: STANDARD, CUSTOM, FORKSCRIPT")
+	public String phase;
 
 	public static void main(String[] args) {
 		// Setup logging
@@ -55,7 +57,7 @@ public class AutoTest implements Runnable {
 		Set<TestResultGroups> projectResults = new HashSet<>();
 		for (File dir : dirs) {
 			try {
-				TestResultGroups result = new TestInvokeThread(runs,silentCompile, dir).call();
+				TestResultGroups result = new TestInvokeThread(runs,emitMvnLogging, phase,dir).call();
 				projectResults.add(result);
 			} catch(Exception e) {
 				Logger.error(e, "Skipping \"{}\" due to exception", dir);
