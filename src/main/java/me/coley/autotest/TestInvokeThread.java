@@ -44,6 +44,12 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 	 */
 	private final boolean emitMvnLogging;
 	/**
+	 * Flag for killing the thread if mvn test fails.
+	 * If set to false, failures will be ignored and given dummy timing values
+	 * to indicate the failure.
+	 */
+	private final boolean killOnFail;
+	/**
 	 * Phase to run.
 	 */
 	private final String phase;
@@ -64,9 +70,10 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 	 */
 	private Invoker invoker = new DefaultInvoker();
 
-	public TestInvokeThread(int runs, boolean emitMvnLogging, String phase, File dir) {
+	public TestInvokeThread(int runs, boolean emitMvnLogging, boolean killOnFail, String phase, File dir) {
 		this.runs = runs;
 		this.emitMvnLogging = emitMvnLogging;
+		this.killOnFail = killOnFail;
 		this.dir = dir;
 		if (phase == null)
 			phase = "ALL";
@@ -318,9 +325,12 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 		});
 		InvocationResult res = invoker.execute(test);
 		if(res.getExitCode() != 0) {
+			if (killOnFail) {
+				throw new IllegalStateException("Test invoke failed.", res.getExecutionException());
+			}
 			Logger.error(res.getExecutionException(), "Test invoke failed.");
 			TestResults ret = new TestResults(total.get(), fails.get(), errors.get(), skipped.get(), -1);
-			Logger.info(ret);
+			Logger.error(ret);
 			return ret;
 		}
 		// Fetch results
