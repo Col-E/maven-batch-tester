@@ -30,11 +30,11 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 	 * Opts to use when running the projects, useful since we're going to want to skip rat since
 	 * we need to generate a log-file containing the runtime analysis of the test phase.
 	 */
-	private static final String INVOKE_OPTS = "-Drat.skip=true -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true -Dpmd.skip=true -Dcpd.skip=true -Dfindbugs.skip=true";
+	private static final String INVOKE_OPTS = "-Drat.skip=true -Denforcer.skip=true -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true -Dpmd.skip=true -Dcpd.skip=true -Dfindbugs.skip=true";
 	/**
 	 * Timeout before terminating a sub-process in seconds.
 	 */
-	private static final int TIMEOUT_SECONDS = 60 * 30;
+	private static final int TIMEOUT_SECONDS = 60 * 60 * 2;
 	/**
 	 * Number of times to re-execute tests.
 	 */
