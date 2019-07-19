@@ -111,15 +111,15 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 				exec(poms, standard, "3.0.0-M3", "Standard");
 				break;
 			case "CUSTOM":
-				exec(poms, standard, "3.0.0-SNAPSHOT", "Custom");
+				exec(poms, custom, "3.0.0-SNAPSHOT", "Custom");
 				break;
 			case "FORKSCRIPT":
-				exec(poms, standard, "2.21.0", "Forkscript");
+				exec(poms, forkscript, "2.21.0", "Forkscript");
 				break;
 			default:
 				exec(poms, standard, "3.0.0-M3", "Standard");
-				exec(poms, standard, "3.0.0-SNAPSHOT", "Custom");
-				exec(poms, standard, "2.21.0", "Forkscript");
+				exec(poms, custom, "3.0.0-SNAPSHOT", "Custom");
+				exec(poms, forkscript, "2.21.0", "Forkscript");
 				break;
 		}
 		return new TestResultGroups(name, standard, forkscript, custom);
