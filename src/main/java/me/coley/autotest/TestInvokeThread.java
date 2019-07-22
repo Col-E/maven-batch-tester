@@ -30,15 +30,19 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 	 * Opts to use when running the projects, useful since we're going to want to skip rat since
 	 * we need to generate a log-file containing the runtime analysis of the test phase.
 	 */
-	private static final String INVOKE_OPTS = "-Drat.skip=true -Denforcer.skip=true -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true -Dpmd.skip=true -Dcpd.skip=true -Dfindbugs.skip=true";
+	private static final String INVOKE_OPTS = "-Dcobertura.skip=true -Djacoco.skip=true -Drat.skip=true -Denforcer.skip=true -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true -Dpmd.skip=true -Dcpd.skip=true -Dfindbugs.skip=true";
 	/**
 	 * Timeout before terminating a sub-process in seconds.
 	 */
 	private static final int TIMEOUT_SECONDS = 60 * 60 * 2;
 	/**
-	 * Number of times to re-execute tests.
+	 * Number of times to collect results. If a test invoke fails we'll run again unless we hit the max rerun count.
 	 */
 	private final int runs;
+	/**
+	 * Maximum number of runs before skipping the project.
+	 */
+	private final int maxRuns;
 	/**
 	 * Flag for allowing emitting maven's logging.
 	 */
@@ -70,8 +74,9 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 	 */
 	private Invoker invoker = new DefaultInvoker();
 
-	public TestInvokeThread(int runs, boolean emitMvnLogging, boolean killOnFail, String phase, File dir) {
+	public TestInvokeThread(int runs, int maxRuns, boolean emitMvnLogging, boolean killOnFail, String phase, File dir) {
 		this.runs = runs;
+		this.maxRuns = maxRuns;
 		this.emitMvnLogging = emitMvnLogging;
 		this.killOnFail = killOnFail;
 		this.dir = dir;
@@ -125,12 +130,25 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 		return new TestResultGroups(name, standard, forkscript, custom);
 	}
 
-	private void exec(List<File> poms, List<TestResults> results, String version, String phase)throws Exception {
+	private void exec(List<File> poms, List<TestResults> results, String version, String phase)
+			throws Exception {
 		setupPoms(version, poms);
-		for(int i = 0; i < runs; i++) {
-			TestResults res = runTests(i, phase);
-			if(res != null)
+		int iteration = 0;
+		int collections = 0;
+		while(true) {
+			TestResults res = runTests(iteration++, phase);
+			if(res != null) {
+				// Record all results
 				results.add(res);
+				// But ensure that we get at least <runs> many collections of valid executions
+				if(res.elapsed > 1)
+					collections++;
+				if(collections >= runs)
+					break;
+			}
+			// If we're failing don't beat a dead horse
+			if (iteration >= maxRuns)
+				break;
 		}
 	}
 
@@ -280,6 +298,7 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 
 	private TestResults runTests(int run, String version) throws Exception {
 		// Run tests
+		StringBuilder log = new StringBuilder();
 		InvocationRequest test = new DefaultInvocationRequest();
 		test.setPomFile(rootPom);
 		test.setGoals(Arrays.asList("test"));
@@ -291,6 +310,9 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 		AtomicInteger errors = new AtomicInteger(0);
 		AtomicInteger skipped = new AtomicInteger(0);
 		test.setOutputHandler(line -> {
+			// record log
+			log.append(line).append('\n');
+			// emit log if prompted
 			if (emitMvnLogging) {
 				Logger.trace(line);
 			}
@@ -329,7 +351,7 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 				throw new IllegalStateException("Test invoke failed.", res.getExecutionException());
 			}
 			Logger.error(res.getExecutionException(), "Test invoke failed.");
-			TestResults ret = new TestResults(total.get(), fails.get(), errors.get(), skipped.get(), -1);
+			TestResults ret = new TestResults(total.get(), fails.get(), errors.get(), skipped.get(), -1, log.toString());
 			Logger.error(ret);
 			return ret;
 		}
@@ -349,7 +371,7 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 				time += Integer.parseInt(args[5]);
 			}
 		}
-		TestResults ret = new TestResults(total.get(), fails.get(), errors.get(), skipped.get(), time);
+		TestResults ret = new TestResults(total.get(), fails.get(), errors.get(), skipped.get(), time, log.toString());
 		Logger.info(ret);
 		return ret;
 	}

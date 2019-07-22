@@ -14,13 +14,18 @@ public class TestResults {
 	 * Time elapsed in maven's test phase.
 	 */
 	public final int elapsed;
+	/**
+	 * Text of mvn test output.
+	 */
+	public final String log;
 
-	public TestResults(int total, int fails, int errors, int skipped, int elapsed) {
+	public TestResults(int total, int fails, int errors, int skipped, int elapsed, String log) {
 		this.total = total;
 		this.fails = fails;
 		this.errors = errors;
 		this.skipped = skipped;
 		this.elapsed = elapsed;
+		this.log = log;
 	}
 
 	@Override
