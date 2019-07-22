@@ -103,13 +103,13 @@ public class AutoTest implements Runnable {
 				customDir.mkdir();
 				int i = 0;
 				for(TestResults result : group.getStandard())
-					FileUtils.write(new File(standardDir, "log-" + i + ".txt"), result.log, "UTF-8");
+					FileUtils.write(new File(standardDir, "log-" + (i++) + ".txt"), result.log, "UTF-8");
 				i = 0;
 				for(TestResults result : group.getForkscript())
-					FileUtils.write(new File(forkscriptDir, "log-" + i + ".txt"), result.log, "UTF-8");
+					FileUtils.write(new File(forkscriptDir, "log-" + (i++) + ".txt"), result.log, "UTF-8");
 				i = 0;
 				for(TestResults result : group.getCustom())
-					FileUtils.write(new File(customDir, "log-" + i + ".txt"), result.log, "UTF-8");
+					FileUtils.write(new File(customDir, "log-" + (i++) + ".txt"), result.log, "UTF-8");
 			}
 		} catch(IOException ex) {
 			Logger.error("Failed to dump collected log files", ex);
