@@ -271,7 +271,7 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 		// Request to setup
 		InvocationRequest setup = new DefaultInvocationRequest();
 		setup.setPomFile(rootPom);
-		setup.setGoals(Arrays.asList("clean", "compile"));
+		setup.setGoals(Arrays.asList("clean", "install"));
 		setup.setMavenOpts(INVOKE_OPTS);
 		setup.setTimeoutInSeconds(TIMEOUT_SECONDS);
 			setup.setOutputHandler(line -> {
