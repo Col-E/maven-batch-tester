@@ -1,6 +1,20 @@
 # Maven Batch Tester
 
-Compile all projects in a given directory using `mvn clean compile` then follows up with `mvn test` and logs the results and how long it takes for the `test` phase to execute _(Assumes [maven-lifecycle-logger](https://github.com/jon-bell/maven-lifecycle-logger) is active. Ensure it is active before running this)_.
+Compile all projects in a given directory using `mvn clean install` then follows up with `mvn test` and logs the results and how long it takes for the `test` phase to execute _(Assumes [maven-lifecycle-logger](https://github.com/jon-bell/maven-lifecycle-logger) is active. Ensure it is active before running this)_.
+
+This applies the following skip flags to focus in on logging proper result timings for unit tests:
+
+* `-Dcobertura.skip`
+* `-Djacoco.skip`
+* `-Drat.skip`
+* `-Denforcer.skip`
+* `-Dmaven.javadoc.skip`
+* `-Dcheckstyle.skip`
+* `-Dpmd.skip`
+* `-Dcpd.skip`
+* `-Dfindbugs.skip`
+
+All logs of run tests will be dumped in the adjacent folder by the following pattern: `batch-logs/{project}/{phase}/log-{run-iteration}.txt`
 
 ### Usage:
 
