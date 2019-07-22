@@ -9,9 +9,15 @@ java -jar autotest-{version}.jar [-ks] [-m=<mavenHome>] [-p=<phase>] [-r=<runs>]
       <repositoriesDir>   The directory containing repositories to analyze.
       <reportFile>        The file to write the analysis report to.
       -m=<mavenHome>      Set the maven home directory. Default uses %MAVEN_HOME% environment variable.
-      -r=<runs>           Number of times to rerun tests.
+      -r=<runs>           Number of successful test collections to terminate on.
+                              Default: 1
+      -x=<maxRuns>        Maximum number of times to run tests before skipping the project.
+                              Default: 20
       -p=<phase>          Specify to only run one of the phases of the batch tester. 
-                              Options: STANDARD, CUSTOM, FORKSCRIPT, ALL (default)
+                              Default: ALL
+                              Options: ALL, STANDARD, CUSTOM, FORKSCRIPT
       -k                  Kill on test failure.
+                              Default: false
       -s                  Emit maven's logging.
+                              Default: false
 ```

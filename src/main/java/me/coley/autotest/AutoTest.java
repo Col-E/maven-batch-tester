@@ -29,7 +29,7 @@ public class AutoTest implements Runnable {
 	public File mavenHome;
 	@CommandLine.Option(names = {"-r"}, description = "Number of successful test collections to terminate on.", defaultValue = "1")
 	public int runs = 1;
-	@CommandLine.Option(names = {"-m"}, description = "Maximum number of times to run tests before skipping the project.", defaultValue = "20")
+	@CommandLine.Option(names = {"-x"}, description = "Maximum number of times to run tests before skipping the project.", defaultValue = "20")
 	public int maxRuns = 20;
 	@CommandLine.Option(names = {"-s"}, description = "Emit maven's logging.")
 	public boolean emitMvnLogging;
