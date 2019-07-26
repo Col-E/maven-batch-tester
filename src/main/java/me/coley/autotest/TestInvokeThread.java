@@ -272,7 +272,7 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 		InvocationRequest setup = new DefaultInvocationRequest();
 		setup.setPomFile(rootPom);
 		setup.setGoals(Arrays.asList("clean", "install"));
-		setup.setMavenOpts(INVOKE_OPTS);
+		setup.setMavenOpts(INVOKE_OPTS + " -Dmaven.test.skip=true");
 		setup.setTimeoutInSeconds(TIMEOUT_SECONDS);
 			setup.setOutputHandler(line -> {
 				if (emitMvnLogging) {
@@ -346,14 +346,12 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 			}
 		});
 		InvocationResult res = invoker.execute(test);
-		if(res.getExitCode() != 0) {
+		boolean failed = res.getExitCode() != 0;
+		if(failed && killOnFail) {
+			Logger.error(res.getExecutionException(), "Test invoke failed.");
 			if (killOnFail) {
 				throw new IllegalStateException("Test invoke failed.", res.getExecutionException());
 			}
-			Logger.error(res.getExecutionException(), "Test invoke failed.");
-			TestResults ret = new TestResults(total.get(), fails.get(), errors.get(), skipped.get(), -1, log.toString());
-			Logger.error(ret);
-			return ret;
 		}
 		// Fetch results
 		File phaseLog = new File(dir, "maven.build.log");
@@ -372,7 +370,11 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 			}
 		}
 		TestResults ret = new TestResults(total.get(), fails.get(), errors.get(), skipped.get(), time, log.toString());
-		Logger.info(ret);
+		if (failed) {
+			Logger.error(ret);
+		} else {
+			Logger.info(ret);
+		}
 		return ret;
 	}
 }
