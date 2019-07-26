@@ -141,7 +141,7 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 				// Record all results
 				results.add(res);
 				// But ensure that we get at least <runs> many collections of valid executions
-				if(res.elapsed > 1)
+				if(!res.failed)
 					collections++;
 				if(collections >= runs)
 					break;
@@ -369,7 +369,7 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 				time += Integer.parseInt(args[5]);
 			}
 		}
-		TestResults ret = new TestResults(total.get(), fails.get(), errors.get(), skipped.get(), time, log.toString());
+		TestResults ret = new TestResults(total.get(), fails.get(), errors.get(), skipped.get(), time, log.toString(), failed);
 		if (failed) {
 			Logger.error(ret);
 		} else {
