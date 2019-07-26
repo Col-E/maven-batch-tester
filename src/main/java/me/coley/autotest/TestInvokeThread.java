@@ -1,5 +1,6 @@
 package me.coley.autotest;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.maven.shared.invoker.*;
 import org.pmw.tinylog.Logger;
 import org.w3c.dom.*;
@@ -268,6 +269,8 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 	}
 
 	private void compile() throws Exception {
+		// Log the compile output so that if it fails we can get the reason
+		StringBuilder log = new StringBuilder();
 		// Request to setup
 		InvocationRequest setup = new DefaultInvocationRequest();
 		setup.setPomFile(rootPom);
@@ -275,6 +278,7 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 		setup.setMavenOpts(INVOKE_OPTS + " -Dmaven.test.skip=true");
 		setup.setTimeoutInSeconds(TIMEOUT_SECONDS);
 			setup.setOutputHandler(line -> {
+				log.append(line + "\n");
 				if (emitMvnLogging) {
 					Logger.trace(line);
 				}
@@ -285,6 +289,7 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 			Logger.info("Compiling \"{}\"", name);
 			InvocationResult res = invoker.execute(setup);
 			if(res.getExitCode() != 0) {
+				FileUtils.write(new File("build-fail-log.txt"), log.toString(), "UTF-8");
 				throw new IllegalStateException("Compile invoke failed.", res.getExecutionException());
 			}
 			// Just make the dummy folder so we don't try to compile again and waste time
