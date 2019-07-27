@@ -289,7 +289,7 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 			Logger.info("Compiling \"{}\"", name);
 			InvocationResult res = invoker.execute(setup);
 			if(res.getExitCode() != 0) {
-				FileUtils.write(new File("build-fail-log.txt"), log.toString(), "UTF-8");
+				FileUtils.write(new File(dir, "build-fail-log.txt"), log.toString(), "UTF-8");
 				throw new IllegalStateException("Compile invoke failed.", res.getExecutionException());
 			}
 			// Just make the dummy folder so we don't try to compile again and waste time
