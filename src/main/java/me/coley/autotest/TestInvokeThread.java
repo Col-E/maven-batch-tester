@@ -107,6 +107,8 @@ public class TestInvokeThread implements Callable<TestResultGroups> {
 			case "FORKSCRIPT":
 				exec(pom, forkscript, "2.21.0", "Forkscript");
 				break;
+			case "NONE":
+				break;
 			default:
 				exec(pom, standard, "3.0.0-M3", "Standard");
 				exec(pom, custom, "3.0.0-SNAPSHOT", "Custom");
